@@ -1,0 +1,21 @@
+-- AlterEnum
+-- This migration adds more than one value to an enum.
+-- With PostgreSQL versions 11 and earlier, this is not possible
+-- in a single migration. This can be worked around by creating
+-- multiple migrations, each migration adding only one value to
+-- the enum.
+
+
+ALTER TYPE "AuditEventType" ADD VALUE 'HUMAN_REVIEW_REQUESTED';
+ALTER TYPE "AuditEventType" ADD VALUE 'AI_POLICY_EXECUTION';
+
+-- AlterEnum
+-- This migration adds more than one value to an enum.
+-- With PostgreSQL versions 11 and earlier, this is not possible
+-- in a single migration. This can be worked around by creating
+-- multiple migrations, each migration adding only one value to
+-- the enum.
+
+
+ALTER TYPE "InvoiceStatus" ADD VALUE 'HUMAN_REVIEW';
+ALTER TYPE "InvoiceStatus" ADD VALUE 'OPTED_OUT';

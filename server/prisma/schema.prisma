@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum InvoiceStatus {
+  HIGH_PRIORITY
+  FOLLOW_UP_DUE
+  PROMISE_TO_PAY
+  HUMAN_REVIEW
+  OPTED_OUT
+  RECOVERED
+}
+
+enum UrgencyBand {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RecoveryAction {
+  MONITOR_INVOICE
+  SEND_EMAIL_REMINDER
+  SEND_EMAIL_AND_WHATSAPP_REMINDER
+  SEND_PAYMENT_LINK
+  WAIT_FOR_PROMISED_PAYMENT
+  SEND_PROMISE_REMINDER
+  HUMAN_REVIEW_REQUIRED
+}
+
+enum AuditEventType {
+  INVOICE_IMPORTED
+  POLICY_EVALUATION
+  PROMISE_TO_PAY_CREATED
+  PROMISE_TO_PAY_UPDATED
+  URGENCY_SCORED
+  NEXT_ACTION_RECOMMENDED
+  PAYMENT_LINK_CREATED
+  PAYMENT_LINK_CREATION_FAILED
+  PAYMENT_CONFIRMED
+  INVOICE_RECOVERED
+  WEBHOOK_REJECTED
+  CUSTOMER_REPLY_RECEIVED
+  AI_REPLY_INTERPRETED
+  AUTOMATION_STOPPED
+  HUMAN_REVIEW_REQUESTED
+  AI_POLICY_EXECUTION
+}
+
+enum PromiseToPayStatus {
+  ACTIVE
+  KEPT
+  BROKEN
+  CANCELLED
+}
+
+model Invoice {
+  id                String        @id @default(cuid())
+  invoiceNumber     String        @unique
+  customer          String
+  amount            Int
+  daysOverdue       Int
+  status            InvoiceStatus
+  urgencyScore      Int           @default(0)
+  urgencyBand       UrgencyBand   @default(LOW)
+  recommendedAction RecoveryAction @default(MONITOR_INVOICE)
+  actionReason      String         @default("Invoice is being monitored.")
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  auditLogs         AuditLog[]
+  promisesToPay     PromiseToPay[]
+  paymentLinks      PaymentLink[]
+}
+
+model AuditLog {
+  id        String         @id @default(cuid())
+  invoiceId String
+  eventType AuditEventType
+  actorType String
+  summary   String
+  metadata  Json?
+  createdAt DateTime       @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, createdAt])
+}
+
+model RecoveryPolicy {
+  id                              String   @id @default(cuid())
+  merchantKey                     String   @unique
+  maxExtensionDays                Int      @default(14)
+  maxDiscountPercent              Int      @default(2)
+  maxRemindersPerWeek             Int      @default(3)
+  humanEscalationThresholdDays    Int      @default(45)
+  requireHumanApprovalForDiscount Boolean  @default(true)
+  allowWhatsapp                   Boolean  @default(true)
+  allowEmail                      Boolean  @default(true)
+  allowVoice                      Boolean  @default(false)
+  stopOnOptOut                    Boolean  @default(true)
+  stopOnDispute                   Boolean  @default(true)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+}
+
+model PromiseToPay {
+  id                  String             @id @default(cuid())
+  invoiceId           String
+  promisedAmount      Int
+  promisedPaymentDate DateTime
+  status              PromiseToPayStatus @default(ACTIVE)
+  createdBy           String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, status])
+}
+
+model PaymentLink {
+  id                String   @id @default(cuid())
+  invoiceId         String
+  razorpayLinkId    String   @unique
+  shortUrl          String
+  status            String
+  razorpayPaymentId String?  @unique
+  paidAt            DateTime?
+  amount            Int
+  currency          String   @default("INR")
+  referenceId       String   @unique
+  expiresAt         DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, status])
+}
