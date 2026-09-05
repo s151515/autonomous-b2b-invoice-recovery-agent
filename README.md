@@ -109,6 +109,5 @@ node seed.js
 - Customer disputes the invoice or opts out → automation stopped.
 - Payment recovery → recovered state, audit record, and portfolio metric update.
 
-## Team
-
+## 
 Built for Razorpay AI Buildathon.
